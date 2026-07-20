@@ -19,40 +19,7 @@ El sistema cuenta con un flujo diseñado para garantizar la velocidad de procesa
 
 El siguiente diagrama muestra cómo viajan los datos asíncronamente desde el cliente hasta el webhook final:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client
-    participant API as Axum Web Server
-    participant Queue as Redis Queue (LPUSH)
-    participant Worker as Background Workers
-    participant Storage as File Storage
-    participant Webhook as Webhook Target
-
-    Client->>API: POST /convert-async (File/URL, callback_url)
-    alt REDIS_URL está configurado (Modo 2)
-        API->>Queue: Push Conversion Job (UUID)
-        API-->>Client: 202 Accepted { uuid, enqueue: true }
-        loop Worker Loop
-            Worker->>Queue: Pop Job
-            Worker->>Storage: Run conversion (FFmpeg) & save to storage/<uuid>.<ext>
-            Worker->>Queue: Schedule Cleanup Job (24h delayed)
-            Worker->>Queue: Push Webhook Job
-        end
-        loop Webhook Delivery
-            Worker->>Webhook: POST status/download_url (or binary payload)
-        end
-        loop Delayed Scheduler
-            Worker->>Storage: Delete <uuid>.<ext> (24h later)
-        end
-    else REDIS_URL no está configurado (Modo 1)
-        API->>API: Spawn background thread
-        API-->>Client: 202 Accepted { uuid, enqueue: true }
-        API->>Storage: Run conversion (FFmpeg)
-        API->>Webhook: Stream binary file to Webhook
-        API->>Storage: Immediate cleanup of converted file
-    end
-```
+![Diagrama de Arquitectura](https://mermaid.ink/img/pako:eJytVNtuGjEQ_ZXRPlQgQWlRn1C0Eg2NSkVVygblJVI0aw9g4fVsfCFBUT4m39Ifq8zuBpqE8FI_re3jOWeOj_chESwpGSSObgMZQSOFS4vFtQEAwODZhCInW8-FZwvnWpHx1UqJ1iuhSjQehtMxoIPhfSjginLIyG6ak4e434ECReSMpHL1tDWZzrPv7dfoK7ZrshH-FcV6aTkYWS-61-jMs8XlrvqF0tTM3yhL-Yp5HYHN5yXaJflrU4GrLrtpOpyOBzD9lV1CT7DZkPVddFsjoBUZevPZpAMCtc5RrG-C1XUPqD3Mvo3G2c18NgFy_s8TCDYLtQwWJUPrJ0uGfo2OYzgdd9N0Z8cApsGt4HzH5xQb-ME5tObz8ejFgW6aVkoH0P_Uh6EQVHqS8AAhKNkBMrdVQW8DweP-sGYuG3MnzOV-J45q40AOl1HCEVDt8gBmwYDYi25dXBQlLdvwARxuCDyDq6C9sygv_XhG9z59nzoTK5JBE5xrQhPKyor-lxVI0rgl2T4hPTrZ3PE_PZCRL_2oYSPSakN2e6RyDatj4Tz64HqS74xmlDED0GILuTJot1DiNi633-MdVZ0892pPGT0iTZ7g0MXKE42e7FtcpB0dBNLw0Ux-fpXJ3RPISrwzkO8foV9ZQvmf4lgRnQrSS_zzRWTeEhaN5Yv49D0313mUZVwUJBV6AlFnixc1bRQdy9TmRReTTlKQLVDJZPCQ-BUV8ccpaYFB--Tx8S_saq3p)
 
 En el Modo 1, la API maneja todo en memoria y subprocesos internos inmediatos. En el Modo 2, Redis gestiona la distribución del trabajo, permitiendo absorber picos masivos de tráfico mediante workers dedicados.
 

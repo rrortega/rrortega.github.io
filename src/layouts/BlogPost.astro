@@ -128,4 +128,13 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 	.content-body :global(li) {
 		margin-bottom: 0.5rem;
 	}
+	.content-body :global(img) {
+		max-width: 100%;
+		height: auto;
+		display: block;
+		border-radius: 8px;
+		margin: 2rem auto;
+		border: 1px solid var(--border);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	}
 </style>
