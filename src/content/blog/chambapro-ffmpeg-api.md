@@ -13,13 +13,63 @@ Las interfaces de voz dominan los agentes conversacionales modernos. Cada segund
 
 Si procesas conversiones de audio pesadas de forma síncrona o sobrecargas tu servidor web, la latencia se dispara. Necesitas un microservicio dedicado que intercepte el audio original, lo convierta en milisegundos y mantenga el consumo de RAM en cero.
 
-## Creando un convertidor desde cero
+## El flujo de datos y la arquitectura
 
-Rust es la herramienta ideal para esta tarea por su seguridad y control de memoria. Utilizaremos el framework Axum para levantar un servidor HTTP asíncrono y controlaremos FFmpeg mediante subprocesos no bloqueantes.
+El sistema cuenta con un flujo diseñado para garantizar la velocidad de procesamiento. Se divide en dos modos de ejecución según las necesidades de tu infraestructura.
 
-A continuación, construimos esta solución paso a paso. Diseñamos un flujo de conversión que procesa las solicitudes sin comprometer el rendimiento general del servidor.
+El siguiente diagrama muestra cómo viajan los datos asíncronamente desde el cliente hasta el webhook final:
 
-### Paso 1: Configurar el entorno de Rust
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant API as Axum Web Server
+    participant Queue as Redis Queue (LPUSH)
+    participant Worker as Background Workers
+    participant Storage as File Storage
+    participant Webhook as Webhook Target
+
+    Client->>API: POST /convert-async (File/URL, callback_url)
+    alt REDIS_URL está configurado (Modo 2)
+        API->>Queue: Push Conversion Job (UUID)
+        API-->>Client: 202 Accepted { uuid, enqueue: true }
+        loop Worker Loop
+            Worker->>Queue: Pop Job
+            Worker->>Storage: Run conversion (FFmpeg) & save to storage/<uuid>.<ext>
+            Worker->>Queue: Schedule Cleanup Job (24h delayed)
+            Worker->>Queue: Push Webhook Job
+        end
+        loop Webhook Delivery
+            Worker->>Webhook: POST status/download_url (or binary payload)
+        end
+        loop Delayed Scheduler
+            Worker->>Storage: Delete <uuid>.<ext> (24h later)
+        end
+    else REDIS_URL no está configurado (Modo 1)
+        API->>API: Spawn background thread
+        API-->>Client: 202 Accepted { uuid, enqueue: true }
+        API->>Storage: Run conversion (FFmpeg)
+        API->>Webhook: Stream binary file to Webhook
+        API->>Storage: Immediate cleanup of converted file
+    end
+```
+
+En el Modo 1, la API maneja todo en memoria y subprocesos internos inmediatos. En el Modo 2, Redis gestiona la distribución del trabajo, permitiendo absorber picos masivos de tráfico mediante workers dedicados.
+
+## Resiliencia y escalabilidad en producción
+
+En el mundo real, los archivos de audio pueden estar corruptos, la red puede fallar a mitad de la descarga, o el servidor del webhook destino puede caerse temporalmente. Por esto, la resiliencia y la tolerancia a fallos son pilares fundamentales del diseño.
+
+### Manejo de reintentos
+Si una conversión o entrega falla dentro de la cola, el sistema no descarta el trabajo inmediatamente. El worker reintenta el proceso de manera automática hasta un máximo configurable (`MAX_RETRIES`, por defecto 3) antes de reportar un estado fallido definitivo.
+
+### Predicibilidad de errores
+Cada etapa del proceso actualiza su estado en Redis (`Enqueued`, `Processing`, `Success`, `Failed`). Si la conversión falla, los detalles específicos del error quedan registrados y pueden consultarse directamente mediante el endpoint `/status/:uuid`, facilitando el monitoreo continuo.
+
+### Autolimpieza preventiva
+Para prevenir que el disco del servidor se llene con audios antiguos y provoque una caída general, implementé un sistema de limpieza automática basado en conjuntos ordenados de Redis. Los archivos convertidos se borran permanentemente 24 horas después de su creación.
+
+## Paso 1: Configurar el entorno de Rust
 
 Iniciamos un nuevo proyecto binario usando Cargo en la terminal.
 
@@ -33,7 +83,7 @@ Salida esperada de la terminal:
      Created binary (application) `ffmpeg-api-post` package
 ```
 
-Ahora, configuramos las dependencias necesarias en el archivo `Cargo.toml`.
+Configuramos las dependencias necesarias en el archivo `Cargo.toml` para soportar Axum y tareas de entrada/salida asíncronas.
 
 ```toml
 [dependencies]
@@ -43,9 +93,9 @@ tokio-util = { version = "0.7", features = ["io"] }
 uuid = { version = "1.6", features = ["v4"] }
 ```
 
-### Paso 2: Servidor base y recepción de archivos
+## Paso 2: Servidor base y recepción de archivos
 
-Configuramos el enrutador HTTP de Axum para que reciba archivos multimedia mediante peticiones multipart en el endpoint `/convert`.
+Configuramos el enrutador de Axum para aceptar flujos de archivos utilizando peticiones multipart en el handler `/convert`.
 
 ```rust
 use axum::{
@@ -76,7 +126,6 @@ async fn convert_handler(mut multipart: Multipart) -> Result<Response, StatusCod
     let input_path = temp_input_path.ok_or(StatusCode::BAD_REQUEST)?;
     let output_path = format!("/tmp/converted_{}.mp3", uuid);
     
-    // Aquí ejecutamos la conversión...
     Ok((StatusCode::OK, "Archivo recibido").into_response())
 }
 ```
@@ -87,9 +136,9 @@ Salida esperada al compilar el código base:
     Finished dev [unoptimized + debuginfo] target(s) in 2.34s
 ```
 
-### Paso 3: Conversión asíncrona con FFmpeg
+## Paso 3: Conversión asíncrona con FFmpeg
 
-Invocamos a FFmpeg como un subproceso del sistema sin detener el bucle de eventos (event loop) de Tokio. Usamos `tokio::process::Command`.
+Invocamos a FFmpeg como un subproceso del sistema sin detener el bucle de eventos de Tokio usando `tokio::process::Command`.
 
 ```rust
 use tokio::process::Command;
@@ -116,14 +165,14 @@ async fn run_ffmpeg(input: &str, output: &str) -> Result<(), String> {
 }
 ```
 
-Salida esperada al ejecutar una prueba interna del proceso:
+Salida esperada al ejecutar la conversión:
 ```text
 [info] FFmpeg comando ejecutado con éxito en 45ms.
 ```
 
-### Paso 4: Transmitir el resultado en stream
+## Paso 4: Transmitir el resultado en stream
 
-Abrimos el archivo convertido y lo transmitimos en trozos pequeños directamente al cliente HTTP. Esto mantiene la memoria RAM limpia.
+Abrimos el archivo convertido y lo transmitimos en trozos pequeños directamente en la respuesta HTTP para evitar picos de memoria RAM.
 
 ```rust
 use axum::body::Body;
@@ -148,19 +197,27 @@ Content-Type: audio/mp3
 Transfer-Encoding: chunked
 ```
 
+## Monitoreo con Dashboard Visual
+
+La observabilidad es clave en sistemas productivos. El servicio expone un panel web interactivo e interactivo en `/dashboard` que permite monitorear el estado de la cola en vivo.
+
+![Chambapro FFmpeg Dashboard](https://raw.githubusercontent.com/rrortega/chambapro-ffmpeg-api/main/dashboard.png)
+
+Este panel muestra las métricas de la cola (pendientes, procesados, fallados), actualizaciones de trabajos en tiempo real mediante Server-Sent Events (SSE) y una transmisión en directo de la salida estándar (stdout) del proceso.
+
 ## Errores comunes al integrar FFmpeg
 
 El error más grave es ejecutar `std::process::Command` en lugar de la versión de `tokio`. Esto bloquea el hilo de ejecución principal, impidiendo que Axum atienda otras peticiones en paralelo.
 
 Otro fallo clásico es cargar todo el archivo MP3 en memoria antes de responder. Si diez usuarios suben audios pesados al mismo tiempo, el servidor se queda sin RAM de inmediato. Usa siempre `ReaderStream` para enviar datos de forma progresiva.
 
-Finalmente, recuerda programar limpiezas periódicas de los archivos temporales. La carpeta `/tmp` puede llenarse rápidamente en entornos con mucho tráfico.
-
 ## Resumen del aprendizaje
 
-*   La API de Whisper rinde mejor con archivos `.mp3` optimizados a 128kbps y 16kHz.
-*   Rust y Axum manejan las peticiones concurrentes con latencia mínima.
+*   El desacoplamiento con colas de Redis previene sobrecargas del servidor HTTP bajo tráfico masivo.
+*   El manejo de reintentos y estados claros del trabajo incrementa la resiliencia en producción.
 *   `tokio::process::Command` evita bloquear los hilos principales de la aplicación.
-*   `ReaderStream` mantiene el uso de memoria RAM constante y plano.
+*   La limpieza automática previene interrupciones causadas por falta de espacio en disco.
 
-Como siguiente paso, puedes empaquetar tu binario en un contenedor Docker ligero que incluya FFmpeg preinstalado y subirlo a producción.
+Como siguiente paso, puedes consultar el repositorio de producción completo e iniciar tu propio despliegue resiliente en la nube.
+
+👉 **[github.com/rrortega/chambapro-ffmpeg-api](https://github.com/rrortega/chambapro-ffmpeg-api)**
