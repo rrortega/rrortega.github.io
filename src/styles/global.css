@@ -3,6 +3,7 @@
 */
 
 :root {
+	--text-scale: 1;
 	--bg: #f8fafc;
 	--bg-dot: rgba(203, 213, 225, 0.4);
 	--text: #0f172a;
@@ -17,8 +18,23 @@
 	--font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
 }
 
+/* Manual Dark Theme overrides or OS dark preference if not manually overridden to light */
+:root[data-theme="dark"] {
+	--bg: #0b0f19;
+	--bg-dot: rgba(51, 65, 85, 0.35);
+	--text: #f8fafc;
+	--text-muted: #94a3b8;
+	--accent: #2dd4bf; /* Neon teal */
+	--accent-subtle: rgba(45, 212, 191, 0.08);
+	--accent-hover: #5eead4;
+	--code-bg: #1e293b;
+	--border: #1e293b;
+	--border-hover: #334155;
+	--card-bg: #111827;
+}
+
 @media (prefers-color-scheme: dark) {
-	:root {
+	:root:not([data-theme="light"]) {
 		--bg: #0b0f19;
 		--bg-dot: rgba(51, 65, 85, 0.35);
 		--text: #f8fafc;
@@ -33,6 +49,21 @@
 	}
 }
 
+/* Force Light Theme */
+:root[data-theme="light"] {
+	--bg: #f8fafc;
+	--bg-dot: rgba(203, 213, 225, 0.4);
+	--text: #0f172a;
+	--text-muted: #64748b;
+	--accent: #0f766e;
+	--accent-subtle: rgba(15, 118, 110, 0.08);
+	--accent-hover: #0d9488;
+	--code-bg: #f1f5f9;
+	--border: #e2e8f0;
+	--border-hover: #cbd5e1;
+	--card-bg: #ffffff;
+}
+
 * {
 	box-sizing: border-box;
 }
@@ -45,7 +76,7 @@ body {
 	background-image: radial-gradient(var(--bg-dot) 1px, transparent 1px);
 	background-size: 24px 24px;
 	color: var(--text);
-	font-size: 18px;
+	font-size: calc(18px * var(--text-scale));
 	line-height: 1.6;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
