@@ -185,10 +185,14 @@ Otro fallo clásico es cargar todo el archivo MP3 en memoria antes de responder.
 *   `tokio::process::Command` evita bloquear los hilos principales de la aplicación.
 *   La limpieza automática previene interrupciones causadas por falta de espacio en disco.
 
-Machete, si crees que esto te es útil pásate por GitHub y déjame una estrella. Ya te hice la "pinchamba" y tienes también la imagen lista de Docker Hub para que le hagas pull y la instales con un solo comando:
+<div class="cta-note">
+
+💡 **Machete**, si crees que esto te es útil pásate por GitHub y déjame una estrella. Ya te hice la "pinchamba" y tienes también la imagen lista de Docker Hub para que le hagas pull y la instales con un solo comando:
 
 ```bash
 docker pull rrortega/chambapro-ffmpeg-api:latest
 ```
 
 👉 **[github.com/rrortega/chambapro-ffmpeg-api](https://github.com/rrortega/chambapro-ffmpeg-api)**
+
+</div>

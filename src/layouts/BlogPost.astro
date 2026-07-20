@@ -137,4 +137,23 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 		border: 1px solid var(--border);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 	}
+	.content-body :global(.cta-note) {
+		background: rgba(var(--accent-rgb), 0.05);
+		border: 1px solid var(--border);
+		border-left: 4px solid var(--accent);
+		padding: 1.5rem;
+		border-radius: 6px;
+		margin: 2.5rem 0;
+	}
+	.content-body :global(.cta-note p) {
+		margin-bottom: 0.75rem;
+		font-size: 0.95rem;
+	}
+	.content-body :global(.cta-note p:last-child) {
+		margin-bottom: 0;
+	}
+	.content-body :global(.cta-note pre) {
+		margin: 0.75rem 0 !important;
+		padding: 0.75rem !important;
+	}
 </style>
