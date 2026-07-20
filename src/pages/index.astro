@@ -5,10 +5,10 @@ import Header from '../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 import { getCollection } from 'astro:content';
 import FormattedDate from '../components/FormattedDate.astro';
+import { Image } from 'astro:assets';
 
 const posts = (await getCollection('blog'))
-	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-	.slice(0, 3);
+	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 ---
 
 <!doctype html>
@@ -22,30 +22,46 @@ const posts = (await getCollection('blog'))
 			<section class="intro">
 				<div class="terminal-badge">dev.status = "active"</div>
 				<h1>Hola, soy Rolo.</h1>
-				<p class="subtitle">Software Engineer & Tech Enthusiast</p>
+				<p class="subtitle">CEO at CHAMBAPRO | AI & Process Automation Consultant</p>
 				<p>
 					Bienvenido a mi rincón digital. Acá escribo sobre desarrollo de software, 
-					arquitectura de sistemas y las tecnologías que voy explorando en el día a día.
+					automatización de procesos, arquitectura de sistemas y las tecnologías que voy probando. 
+					Pero también voy a dejar reflexiones sinceras: cosas que construyo y de las que estoy orgulloso, 
+					proyectos que fallaron estrepitosamente (y por qué), y pensamientos bastante frikis sobre tecnología y la vida.
+				</p>
+				<p class="warning-text">
+					<strong>Advertencia amigable:</strong> si no eres tan friki como yo, quizás esto no sea para ti. 
+					No me hago responsable si después de leer empiezas a ver patrones donde no los hay o te obsesionas 
+					con la elegancia de una línea de código. Has sido avisado.
 				</p>
 			</section>
 
 			<hr />
 
-			<section class="latest-posts">
-				<div class="section-header">
-					<h2>Artículos recientes</h2>
-					<a href="/blog" class="all-posts-link">ver todos &rarr;</a>
-				</div>
+			<section class="posts-section">
+				<h2>Artículos</h2>
 				<ul class="post-list">
 					{
-						posts.map((post) => (
+						posts.map((post, index) => (
 							<li>
-								<a href={`/blog/${post.id}/`} class="post-item">
-									<span class="post-date">
-										<FormattedDate date={post.data.pubDate} />
-									</span>
-									<span class="post-title">{post.data.title}</span>
-									<span class="post-arrow">&rarr;</span>
+								<a href={`/blog/${post.id}/`} class="post-link">
+									<article class="post-card">
+										{post.data.heroImage && (
+											<div class="post-image-container">
+												<Image src={post.data.heroImage} alt="" class="post-card-img" loading={index === 0 ? "eager" : "lazy"} />
+											</div>
+										)}
+										<div class="post-card-body">
+											<div class="post-meta">
+												<FormattedDate date={post.data.pubDate} />
+											</div>
+											<h3 class="post-title">{post.data.title}</h3>
+											{post.data.description && <p class="post-desc">{post.data.description}</p>}
+											<div class="post-cta">
+												<span>&lt;/Echate el play&gt;</span>
+											</div>
+										</div>
+									</article>
 								</a>
 							</li>
 						))
@@ -79,78 +95,99 @@ const posts = (await getCollection('blog'))
 		margin-top: -0.5rem;
 		margin-bottom: 1.5rem;
 	}
-	.latest-posts {
-		padding: 1.5rem 0;
-	}
-	.section-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: baseline;
-		margin-bottom: 1.5rem;
-	}
-	.all-posts-link {
-		font-family: var(--font-mono);
+	.warning-text {
 		font-size: 0.9rem;
 		color: var(--text-muted);
+		border-left: 2px solid var(--accent-subtle);
+		padding-left: 1rem;
+		margin-top: 1rem;
 	}
-	.all-posts-link:hover {
-		color: var(--accent);
+	.posts-section {
+		margin-top: 2rem;
 	}
 	.post-list {
 		list-style: none;
 		padding: 0;
 		margin: 0;
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 2rem;
 	}
-	.post-list li {
+	.post-link {
+		color: inherit;
+		text-decoration: none;
+		display: block;
+	}
+	.post-card {
+		display: flex;
+		flex-direction: column;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		overflow: hidden;
+		background: rgba(var(--accent-rgb), 0.01);
+		transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s;
+	}
+	.post-link:hover .post-card {
+		transform: translateY(-6px);
+		border-color: var(--accent);
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+	}
+	.post-image-container {
+		width: 100%;
+		aspect-ratio: 16 / 9;
+		overflow: hidden;
 		border-bottom: 1px solid var(--border);
 	}
-	.post-list li:last-child {
-		border-bottom: none;
+	.post-card-img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		transition: transform 0.3s ease;
 	}
-	.post-item {
+	.post-link:hover .post-card-img {
+		transform: scale(1.02);
+	}
+	.post-card-body {
+		padding: 1.5rem;
 		display: flex;
-		align-items: center;
-		padding: 1rem 0;
-		color: var(--text);
-		text-decoration: none;
-		transition: transform 0.2s ease;
+		flex-direction: column;
+		gap: 0.75rem;
 	}
-	.post-item:hover {
-		color: var(--accent);
-		transform: translateX(6px);
-	}
-	.post-date {
+	.post-meta {
 		font-family: var(--font-mono);
-		font-size: 0.85rem;
+		font-size: 0.8rem;
 		color: var(--text-muted);
-		width: 140px;
-		flex-shrink: 0;
 	}
 	.post-title {
-		font-weight: 500;
-		flex-grow: 1;
+		margin: 0;
+		font-size: 1.35rem;
+		font-weight: 600;
+		transition: color 0.15s ease;
 	}
-	.post-arrow {
-		opacity: 0;
+	.post-link:hover .post-title {
 		color: var(--accent);
-		transition: opacity 0.2s ease, transform 0.2s ease;
-		transform: translateX(-10px);
 	}
-	.post-item:hover .post-arrow {
-		opacity: 1;
-		transform: translateX(0);
+	.post-desc {
+		margin: 0;
+		font-size: 0.95rem;
+		color: var(--text-muted);
+		line-height: 1.6;
+	}
+	.post-cta {
+		margin-top: 0.5rem;
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+		color: var(--accent);
+		font-weight: 600;
+		display: flex;
+		align-items: center;
 	}
 	@media (max-width: 600px) {
-		.post-item {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 0.25rem;
+		.post-card-body {
+			padding: 1.25rem;
 		}
-		.post-date {
-			width: auto;
-		}
-		.post-arrow {
-			display: none;
+		.post-title {
+			font-size: 1.2rem;
 		}
 	}
 </style>

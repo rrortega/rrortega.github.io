@@ -7,9 +7,16 @@ import Header from '../components/Header.astro';
 
 import { Image } from 'astro:assets';
 
-type Props = CollectionEntry<'blog'>['data'];
+interface Props {
+	title: string;
+	description?: string;
+	pubDate: Date;
+	updatedDate?: Date;
+	heroImage?: any;
+	headings?: Array<{ depth: number; slug: string; text: string }>;
+}
 
-const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, headings = [] } = Astro.props;
 ---
 
 <html lang="es">
@@ -23,31 +30,48 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 			<article class="post-article">
 				{heroImage && (
 					<div class="hero-container">
-						<Image src={heroImage} alt="" class="hero-img" />
+						<Image src={heroImage} alt="" class="hero-img" loading="eager" />
 					</div>
 				)}
 				
-				<div class="prose">
-					<header class="post-header">
-						<div class="meta-block">
-							<div class="meta-item">
-								<span class="meta-label">DATE:</span>
-								<FormattedDate date={pubDate} />
-							</div>
-							{updatedDate && (
-								<div class="meta-item">
-									<span class="meta-label">UPDATED:</span>
-									<FormattedDate date={updatedDate} />
-								</div>
-							)}
-						</div>
-						<h1>{title}</h1>
-						{description && <p class="description">{description}</p>}
-						<hr />
-					</header>
+				<div class="post-layout">
+					{headings && headings.filter(h => h.depth === 2 || h.depth === 3).length > 0 && (
+						<aside class="toc-sidebar">
+							<nav class="toc-nav">
+								<p class="toc-title">~/índice</p>
+								<ul>
+									{headings.filter(h => h.depth === 2 || h.depth === 3).map(h => (
+										<li class={`toc-item depth-${h.depth}`}>
+											<a href={`#${h.slug}`}>{h.text}</a>
+										</li>
+									))}
+								</ul>
+							</nav>
+						</aside>
+					)}
 					
-					<div class="content-body">
-						<slot />
+					<div class="prose">
+						<header class="post-header">
+							<div class="meta-block">
+								<div class="meta-item">
+									<span class="meta-label">DATE:</span>
+									<FormattedDate date={pubDate} />
+								</div>
+								{updatedDate && (
+									<div class="meta-item">
+										<span class="meta-label">UPDATED:</span>
+										<FormattedDate date={updatedDate} />
+									</div>
+								)}
+							</div>
+							<h1>{title}</h1>
+							{description && <p class="description">{description}</p>}
+							<hr />
+						</header>
+						
+						<div class="content-body">
+							<slot />
+						</div>
 					</div>
 				</div>
 			</article>
@@ -81,9 +105,90 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 		border-radius: 6px;
 		cursor: zoom-in;
 	}
+	.post-layout {
+		display: flex;
+		gap: 3rem;
+		align-items: flex-start;
+		justify-content: center;
+		max-width: 1000px;
+		margin: 0 auto;
+		position: relative;
+	}
 	.prose {
 		max-width: 680px;
-		margin: 0 auto;
+		width: 100%;
+		margin: 0;
+	}
+	.toc-sidebar {
+		position: sticky;
+		top: 6rem;
+		width: 220px;
+		max-height: calc(100vh - 8rem);
+		overflow-y: auto;
+		display: block;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+	}
+	.toc-sidebar::-webkit-scrollbar {
+		display: none;
+	}
+	.toc-nav {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+	}
+	.toc-title {
+		margin: 0 0 1rem 0;
+		color: var(--accent);
+		font-weight: 700;
+		text-transform: lowercase;
+		letter-spacing: 0.5px;
+	}
+	.toc-nav ul {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		border-left: 1px dashed var(--border);
+	}
+	.toc-item {
+		margin: 0;
+		padding: 0;
+	}
+	.toc-item.depth-2 {
+		padding-left: 0.75rem;
+	}
+	.toc-item.depth-3 {
+		padding-left: 1.5rem;
+		font-size: 0.75rem;
+	}
+	.toc-item a {
+		display: block;
+		padding: 0.25rem 0;
+		color: var(--text-muted);
+		text-decoration: none;
+		transition: color 0.15s ease, border-color 0.15s ease;
+		border-left: 2px solid transparent;
+		margin-left: -1px;
+	}
+	.toc-item a:hover {
+		color: var(--accent-hover);
+	}
+	.toc-item a.active {
+		color: var(--accent) !important;
+		font-weight: 600;
+		border-left: 2px solid var(--accent);
+		padding-left: 0.25rem;
+	}
+	@media (max-width: 1000px) {
+		.post-layout {
+			flex-direction: column;
+			gap: 0;
+		}
+		.toc-sidebar {
+			display: none;
+		}
+		.prose {
+			margin: 0 auto;
+		}
 	}
 	.post-header {
 		margin-bottom: 2.5rem;
@@ -232,6 +337,80 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 		font-family: var(--font-mono);
 		font-size: 0.9rem;
 	}
+	
+	/* Estilos para el contenedor y botón de copiar código */
+	:global(.code-block) {
+		position: relative;
+		margin: 1.5rem 0;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		background: var(--code-bg);
+		overflow: hidden;
+		font-family: var(--font-mono), monospace;
+	}
+	:global(.code-header) {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.5rem 1rem;
+		background: rgba(255, 255, 255, 0.02);
+		border-bottom: 1px solid var(--border);
+	}
+	:global(.language-tag) {
+		color: var(--text-muted);
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		font-weight: 600;
+	}
+	:global(.code-block pre) {
+		margin: 0 !important;
+		border: none !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+		padding: 1rem !important;
+		overflow-x: auto;
+		font-size: 0.875rem;
+		line-height: 1.6;
+	}
+	:global(.copy-btn) {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.25rem 0.5rem;
+		background: rgba(120, 120, 120, 0.1);
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		color: var(--text-muted);
+		font-size: 0.7rem;
+		cursor: pointer;
+		opacity: 0; /* Oculto por defecto */
+		transition: all 0.2s ease;
+		font-family: inherit;
+	}
+	:global(.code-block:hover .copy-btn) {
+		opacity: 1; /* Aparece al hacer hover sobre el bloque de código */
+	}
+	:global(.copy-btn:hover) {
+		background: rgba(120, 120, 120, 0.2);
+		border-color: var(--accent);
+		color: var(--text);
+		transform: scale(1.02);
+	}
+	:global(.copy-btn:active) {
+		transform: scale(0.95);
+	}
+	:global(.copy-btn.copied) {
+		background: rgba(46, 160, 67, 0.2);
+		border-color: #2ea043;
+		color: #2ea043;
+	}
+	:global(.copy-icon) {
+		flex-shrink: 0;
+	}
+	:global(.btn-text) {
+		line-height: 1;
+	}
 </style>
 
 <script>
@@ -266,5 +445,90 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 				closeModal();
 			}
 		});
+
+		// Integración de copiado de código con un click
+		const codeBlocks = document.querySelectorAll('.content-body pre');
+		const copyIcon = `<svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+		const checkIcon = `<svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"></path></svg>`;
+
+		codeBlocks.forEach(codeBlock => {
+			// Evitamos duplicar en transiciones Astro
+			if (codeBlock.parentElement && codeBlock.parentElement.classList.contains('code-block')) return;
+
+			// Detectar lenguaje de los atributos de Astro
+			const lang = codeBlock.getAttribute('data-language') || 'code';
+
+			// Crear contenedor wrapper
+			const wrapper = document.createElement('div');
+			wrapper.className = 'code-block';
+			wrapper.setAttribute('data-language', lang);
+
+			// Crear cabecera con etiqueta de lenguaje
+			const header = document.createElement('div');
+			header.className = 'code-header';
+			header.innerHTML = `<span class="language-tag">${lang}</span>`;
+
+			// Crear botón de copiado
+			const copyButton = document.createElement('button');
+			copyButton.className = 'copy-btn';
+			copyButton.type = 'button';
+			copyButton.ariaLabel = 'Copiar código';
+			copyButton.innerHTML = `${copyIcon}<span class="btn-text">Copiar</span>`;
+
+			// Insertar wrapper y mover elementos
+			codeBlock.parentNode?.insertBefore(wrapper, codeBlock);
+			header.appendChild(copyButton);
+			wrapper.appendChild(header);
+			wrapper.appendChild(codeBlock);
+
+			copyButton.addEventListener('click', async () => {
+				const codeEl = codeBlock.querySelector('code');
+				const text = codeEl ? codeEl.innerText : codeBlock.innerText;
+
+				try {
+					await navigator.clipboard.writeText(text);
+					copyButton.innerHTML = `${checkIcon}<span class="btn-text">¡Copiado!</span>`;
+					copyButton.classList.add('copied');
+					setTimeout(() => {
+						copyButton.innerHTML = `${copyIcon}<span class="btn-text">Copiar</span>`;
+						copyButton.classList.remove('copied');
+					}, 2000);
+				} catch (err) {
+					console.error('Error al copiar: ', err);
+					copyButton.innerHTML = `${copyIcon}<span class="btn-text">Error</span>`;
+				}
+			});
+		});
+
+		// Scroll Spy para el Índice (Table of Contents)
+		const tocLinks = document.querySelectorAll('.toc-nav a');
+		const headings = Array.from(document.querySelectorAll('.content-body h2, .content-body h3'));
+
+		const handleScrollSpy = () => {
+			let currentActiveId = '';
+			const scrollPos = window.scrollY + 120; // Offset para compensar el header pegajoso
+
+			for (let i = 0; i < headings.length; i++) {
+				const heading = headings[i] as HTMLElement;
+				if (heading.offsetTop <= scrollPos) {
+					currentActiveId = heading.getAttribute('id') || '';
+				} else {
+					break;
+				}
+			}
+
+			tocLinks.forEach(link => {
+				const href = link.getAttribute('href');
+				if (currentActiveId && href === `#${currentActiveId}`) {
+					link.classList.add('active');
+				} else {
+					link.classList.remove('active');
+				}
+			});
+		};
+
+		window.removeEventListener('scroll', handleScrollSpy);
+		window.addEventListener('scroll', handleScrollSpy);
+		handleScrollSpy();
 	});
 </script>

@@ -10,7 +10,6 @@ import HeaderLink from './HeaderLink.astro';
 		</div>
 		<div class="internal-links">
 			<HeaderLink href="/">~/home</HeaderLink>
-			<HeaderLink href="/blog">~/blog</HeaderLink>
 			<HeaderLink href="/about">~/about</HeaderLink>
 		</div>
 		<div class="right-block">
@@ -50,14 +49,37 @@ import HeaderLink from './HeaderLink.astro';
 
 		textDec?.addEventListener('click', () => changeScale(-0.1));
 		textInc?.addEventListener('click', () => changeScale(0.1));
+
+		// Scroll listener for sticky header styling
+		const header = document.querySelector('header');
+		const handleScroll = () => {
+			if (window.scrollY > 10) {
+				header?.classList.add('scrolled');
+			} else {
+				header?.classList.remove('scrolled');
+			}
+		};
+		window.addEventListener('scroll', handleScroll);
+		handleScroll();
 	});
 </script>
 
 <style>
 	header {
+		position: sticky;
+		top: 0;
+		z-index: 100;
 		margin: 0;
 		padding: 1.5rem 1rem;
 		background: transparent;
+		transition: background-color 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease, padding 0.3s ease;
+	}
+	header.scrolled {
+		background: var(--header-bg);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		padding: 0.75rem 1rem;
+		border-bottom: 1px solid var(--border);
 	}
 	nav {
 		width: 800px;
@@ -68,6 +90,11 @@ import HeaderLink from './HeaderLink.astro';
 		justify-content: space-between;
 		padding-bottom: 1rem;
 		border-bottom: 1px dashed var(--border);
+		transition: padding 0.3s ease, border-color 0.3s ease;
+	}
+	header.scrolled nav {
+		padding-bottom: 0;
+		border-bottom-color: transparent;
 	}
 	.logo a {
 		font-family: var(--font-mono);

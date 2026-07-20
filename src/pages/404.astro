@@ -1,0 +1,111 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
+---
+
+<!doctype html>
+<html lang="es">
+	<head>
+		<BaseHead title={`404 - Página no encontrada | ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<div class="error-container">
+				<div class="terminal-badge error">status.code = 404</div>
+				<h1>Oops... ruta inválida</h1>
+				<p class="subtitle">El recurso solicitado no existe o fue movido de directorio.</p>
+				
+				<div class="terminal-error">
+					<p class="error-line"><span class="prompt">guest@iamrolo:~$</span> curl -I {Astro.url.pathname}</p>
+					<p class="error-line-response">[sys.error] 404: route_not_found</p>
+					<p class="error-line-response">Connection closed by host</p>
+				</div>
+
+				<a href="/" class="home-btn">cd ~/home</a>
+			</div>
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	.error-container {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		justify-content: center;
+		padding: 4rem 0;
+		gap: 1.5rem;
+	}
+	h1 {
+		font-size: 2.2rem;
+		margin: 0;
+		font-weight: 700;
+	}
+	.subtitle {
+		font-size: 1.1rem;
+		color: var(--text-muted);
+		margin: 0;
+		max-width: 500px;
+		line-height: 1.6;
+	}
+	.terminal-badge.error {
+		background-color: rgba(239, 68, 68, 0.1);
+		border-color: rgb(239, 68, 68);
+		color: rgb(239, 68, 68);
+	}
+	.terminal-badge {
+		display: inline-block;
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+		padding: 0.25rem 0.6rem;
+		border: 1px solid var(--accent);
+		border-radius: 4px;
+		color: var(--accent);
+		margin-bottom: 0.5rem;
+	}
+	.terminal-error {
+		width: 100%;
+		max-width: 500px;
+		background: rgba(0, 0, 0, 0.2);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 1.25rem;
+		font-family: var(--font-mono), monospace;
+		font-size: 0.9rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin: 1rem 0;
+	}
+	.error-line {
+		margin: 0;
+		color: var(--text);
+	}
+	.prompt {
+		color: var(--accent);
+	}
+	.error-line-response {
+		margin: 0;
+		color: rgb(239, 68, 68);
+	}
+	.home-btn {
+		display: inline-block;
+		font-family: var(--font-mono), monospace;
+		font-size: 0.9rem;
+		color: var(--accent);
+		text-decoration: none;
+		border: 1px solid var(--accent);
+		padding: 0.5rem 1.2rem;
+		border-radius: 6px;
+		background: rgba(var(--accent-rgb), 0.02);
+		transition: transform 0.2s, background-color 0.2s;
+	}
+	.home-btn:hover {
+		background: rgba(var(--accent-rgb), 0.08);
+		transform: translateY(-2px);
+	}
+</style>

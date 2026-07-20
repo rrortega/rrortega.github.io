@@ -15,6 +15,7 @@
 	--border: #e2e8f0;
 	--border-hover: #cbd5e1;
 	--card-bg: #ffffff;
+	--header-bg: rgba(248, 250, 252, 0.8);
 	--font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
 }
 
@@ -31,6 +32,7 @@
 	--border: #1e293b;
 	--border-hover: #334155;
 	--card-bg: #111827;
+	--header-bg: rgba(11, 15, 25, 0.8);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -46,6 +48,7 @@
 		--border: #1e293b;
 		--border-hover: #334155;
 		--card-bg: #111827;
+		--header-bg: rgba(11, 15, 25, 0.8);
 	}
 }
 
@@ -62,6 +65,7 @@
 	--border: #e2e8f0;
 	--border-hover: #cbd5e1;
 	--card-bg: #ffffff;
+	--header-bg: rgba(248, 250, 252, 0.8);
 }
 
 * {

@@ -4,12 +4,24 @@ const today = new Date();
 
 <footer>
 	<div class="footer-content">
-		<span>&copy; {today.getFullYear()} Rolo. Built with Astro.</span>
+		<span>&copy; {today.getFullYear()} RoloDev</span>
 		<div class="links">
 			<a href="https://github.com/rrortega" target="_blank" rel="noopener noreferrer">github</a>
 			<span class="sep">/</span>
-			<a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">linkedin</a>
+			<a href="https://www.linkedin.com/in/rrortega/" target="_blank" rel="noopener noreferrer">linkedin</a>
+			<span class="sep">/</span>
+			<a href="https://chamba.pro" target="_blank" rel="noopener noreferrer">chamba.pro</a>
 		</div>
+	</div>
+	<div class="ascii-container">
+		<pre class="ascii-logo">
+      _       __    _____   ____  _      ____  _____  ______ __      __    _      
+    / /      / /   |  __ \ / __ \| |    / __ \|  __ \|  ____|\ \    / /   | \     
+   / /      / /    | |__) | |  | | |   | |  | | |  | | |__    \ \  / /     \ \    
+  &lt; &lt;      / /     |  _  /| |  | | |   | |  | | |  | |  __|    \ \/ /       &gt; &gt;   
+   \ \    / /      | | \ \ |__| | |___| |__| | |__| | |____    \  /       / /    
+    \_\  /_/       |_|  \_\____/|______\____/|_____/|______|    \/       /_/     
+		</pre>
 	</div>
 </footer>
 
@@ -51,5 +63,28 @@ const today = new Date();
 			gap: 0.75rem;
 			align-items: flex-start;
 		}
+	}
+	.ascii-container {
+		width: 800px;
+		max-width: calc(100% - 2em);
+		margin: 2.5rem auto 0 auto;
+		display: flex;
+		justify-content: center;
+		overflow: hidden;
+	}
+	.ascii-logo {
+		margin: 0;
+		padding: 0;
+		background: linear-gradient(to bottom, var(--accent), var(--accent-subtle)) !important;
+		-webkit-background-clip: text !important;
+		-webkit-text-fill-color: transparent !important;
+		border: none !important;
+		border-radius: 0 !important;
+		font-family: var(--font-mono);
+		font-size: clamp(4px, 1vw, 12px);
+		line-height: 1.15;
+		text-align: center;
+		white-space: pre;
+		font-weight: 700;
 	}
 </style>
