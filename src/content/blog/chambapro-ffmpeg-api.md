@@ -1,84 +1,202 @@
 ---
-title: 'Procesamiento de Audio en Tiempo Real con Rust y FFmpeg'
-description: 'Cómo construí un microservicio ultra rápido y escalable en Rust para convertir audios de WhatsApp en milisegundos y alimentar pipelines de OpenAI Whisper.'
+title: 'Guía paso a paso: Construyendo un convertidor de audio ultra rápido en Rust y FFmpeg'
+description: 'Aprende cómo crear un microservicio de alto rendimiento y bajo consumo de memoria para procesar archivos de voz de WhatsApp y optimizar pipelines de OpenAI Whisper.'
 pubDate: 'Jul 19 2026'
 heroImage: 'https://opengraph.githubassets.com/8ec9919eeb7baeab4090eaed242cd15033af0fb105f48a60e996f75f63930a63/rrortega/chambapro-ffmpeg-api'
 ---
 
-Integrar bots conversacionales inteligentes con canales de mensajería populares (como WhatsApp o Facebook Messenger) presenta desafíos técnicos interesantes. Uno de los problemas más comunes ocurre cuando los usuarios envían notas de voz. 
+Integrar notas de voz en chatbots (como en WhatsApp o Messenger) a menudo nos choca con una pared de formatos. Las plataformas entregan audios optimizados en `.oga` o `.ogg`, pero los modelos de transcripción como **OpenAI Whisper** vuelan y tienen mejor precisión si les entregas un `.mp3` clásico de 128kbps.
 
-Plataformas como ManyChat, yCloud o Kaypso entregan estos audios en formatos optimizados para mensajería como `.oga` o `.ogg`. Sin embargo, los motores de Speech-to-Text (STT) modernos, como **OpenAI Whisper**, son sustancialmente más rápidos y precisos cuando procesan archivos `.mp3` estándar.
-
-Para resolver este cuello de botella, diseñé y construí **[chambapro-ffmpeg-api](https://github.com/rrortega/chambapro-ffmpeg-api)**: un microservicio ultra ligero y concurrente escrito en Rust que actúa como proxy de conversión en tiempo real.
+Para solucionar esto de raíz, construí **[chambapro-ffmpeg-api](https://github.com/rrortega/chambapro-ffmpeg-api)**. En este tutorial, vamos a desglosar **paso a paso** cómo puedes construir tu propio proxy convertidor en Rust, garantizando alta concurrencia y un consumo de memoria RAM plano cercano a cero.
 
 ---
 
-## 📊 Arquitectura y Flujo de Trabajo
+## Paso 1: Configurar el Entorno y Dependencias
 
-El servicio está diseñado para funcionar en dos modos de ejecución, dependiendo de la infraestructura disponible:
-
-### Modo 1: Procesamiento Directo (Sin Redis)
-Ideal para despliegues sencillos. El servidor recibe el archivo o la URL, inicia un hilo en background para procesar la conversión con FFmpeg, transmite el archivo binario convertido directamente al Webhook configurado e inmediatamente limpia el almacenamiento local.
-
-### Modo 2: Cola Distribuida (Con Redis)
-Para escenarios de alta concurrencia y tráfico masivo. El flujo funciona de la siguiente manera:
-
-1. **Recepción**: El servidor web de Axum recibe una petición `POST /convert-async` con el archivo o URL y un `callback_url`.
-2. **Encolamiento**: La API inserta el trabajo en una cola de Redis (`LPUSH`) y responde de inmediato al cliente con un `202 Accepted` y el UUID del trabajo.
-3. **Procesamiento**: Los background workers consumen los trabajos de la cola, ejecutan FFmpeg de manera aislada y guardan el resultado.
-4. **Notificación**: Se envía una petición HTTP `POST` al webhook con el resultado.
-5. **Autolimpieza**: Se programa una tarea retrasada en Redis para eliminar los archivos generados después de 24 horas.
-
----
-
-## 🛠️ Stack Tecnológico
-
-Elegí cada componente de este stack buscando el máximo rendimiento y estabilidad:
-
-- **Rust & Axum**: Rust garantiza seguridad en memoria y concurrencia sin recolector de basura (garbage collector). Axum nos provee un enrutador HTTP de alta velocidad basado en Tokio.
-- **FFmpeg**: El motor estándar de la industria para manipulación multimedia, invocado eficientemente mediante subprocesos controlados.
-- **Redis**: Como broker de mensajería y almacenamiento de estados, usando listas y conjuntos ordenados para las colas y las tareas retrasadas.
-- **Tokio & ReaderStream**: Para transmitir los archivos binarios trozo a trozo (chunk-by-chunk) hacia los clientes o webhooks, manteniendo el uso de memoria RAM completamente plano.
-
----
-
-## 🚀 Ejemplos de Uso
-
-### Conversión Síncrona (Upload directo)
-Podés enviar un archivo de audio directamente y recibir el flujo binario procesado en la respuesta:
+Lo primero que necesitamos es iniciar un proyecto binario en Rust:
 
 ```bash
-curl -X POST http://localhost/convert \
-  -F "file=@input.oga" \
-  -F "output_format=mp3" \
-  --output output.mp3
+cargo new ffmpeg-api
+cd ffmpeg-api
 ```
 
-### Conversión Asíncrona (Basado en colas)
-Para procesar archivos pesados o integraciones webhooks:
+Editamos el archivo `Cargo.toml` agregando las herramientas clave de nuestro ecosistema concurrente:
 
-```bash
-curl -X POST http://localhost/convert-async \
-  -F "url=https://example.com/audio.oga" \
-  -F "output_format=mp3" \
-  -F "callback_url=https://your-webhook.com/callback"
+```toml
+[dependencies]
+axum = "0.7"
+tokio = { version = "1.35", features = ["full"] }
+tokio-util = { version = "0.7", features = ["io"] }
+reqwest = { version = "0.11", features = ["stream"] }
+uuid = { version = "1.6", features = ["v4"] }
+anyhow = "1.0"
 ```
 
-El servicio responderá inmediatamente:
+*   **Axum**: Framework web ligero sobre Tokio.
+*   **Tokio & Tokio-Util**: Ejecución asíncrona y utilidades de streams.
+*   **Reqwest**: Para descargar los audios remotos en segundo plano de forma eficiente.
 
-```json
-{
-  "uuid": "7a94dfbd-5b0c-4464-9b2f-3b2d6a5c2f9d",
-  "enqueue": true
+---
+
+## Paso 2: Recibir Archivos con Axum (Multipart Form)
+
+Para procesar el audio, la API debe aceptar subidas de archivos directas mediante peticiones multipart. Vamos a definir la estructura del endpoint:
+
+```rust
+use axum::{
+    extract::{Multipart, State},
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::post,
+    Router,
+};
+use std::path::Path;
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
+use uuid::Uuid;
+
+async fn convert_handler(mut multipart: Multipart) -> Result<Response, StatusCode> {
+    let mut temp_input_path = None;
+    let uuid = Uuid::new_v4().to_string();
+
+    while let Some(field) = multipart.next_field().await.map_err(|_| StatusCode::BAD_REQUEST)? {
+        let name = field.name().unwrap_or("").to_string();
+        
+        if name == "file" {
+            let path = format!("/tmp/upload_{}.oga", uuid);
+            let mut file = File::create(&path).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            
+            // Leemos el stream del archivo por trozos (chunks)
+            let data = field.bytes().await.map_err(|_| StatusCode::BAD_REQUEST)?;
+            file.write_all(&data).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            
+            temp_input_path = Some(path);
+        }
+    }
+
+    let input_path = temp_input_path.ok_or(StatusCode::BAD_REQUEST)?;
+    let output_path = format!("/tmp/converted_{}.mp3", uuid);
+
+    // Siguiente paso: Invocar a FFmpeg...
+```
+
+---
+
+## Paso 3: Invocar FFmpeg de Forma Asíncrona (Non-Blocking)
+
+Llamar a procesos del sistema de forma síncrona en Rust bloquearía el hilo de ejecución principal de Tokio, arruinando la escalabilidad. Usamos `tokio::process::Command` para invocar FFmpeg asíncronamente:
+
+```rust
+use tokio::process::Command;
+
+async fn run_ffmpeg(input: &str, output: &str) -> anyhow::Result<()> {
+    let status = Command::new("ffmpeg")
+        .args([
+            "-y",             // Sobrescribir archivo de salida si ya existe
+            "-i", input,      // Archivo de entrada
+            "-acodec", "libmp3lame", // Códec de conversión MP3
+            "-ab", "128k",    // Bitrate de audio
+            "-ar", "16000",   // Frecuencia de muestreo óptima para Whisper
+            output
+        ])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .await?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!("FFmpeg falló en el procesamiento"))
+    }
 }
 ```
 
 ---
 
-## 📈 Dashboard en Tiempo Real
+## Paso 4: Transmisión Eficiente sin Cargar la RAM (Streaming)
 
-El servicio no es solo una API invisible; expone un panel web interactivo (`GET /dashboard`) donde se pueden monitorear las métricas de la cola (pendientes, exitosos, fallados), ver actualizaciones en tiempo real de los trabajos y visualizar los logs del proceso en vivo.
+Si cargamos el archivo resultante completo en la memoria del servidor para retornarlo, un pico de tráfico saturaría la RAM. En su lugar, abrimos el archivo y lo convertimos en un stream continuo usando `ReaderStream`:
 
-Si te interesa revisar el código, extender el servicio o desplegarlo en tu propia infraestructura con Docker, podés acceder al repositorio oficial en GitHub: 
+```rust
+use tokio_util::io::ReaderStream;
+use axum::body::Body;
 
-👉 **[rrortega/chambapro-ffmpeg-api](https://github.com/rrortega/chambapro-ffmpeg-api)**
+async fn stream_file(path: &str) -> Result<Response, StatusCode> {
+    let file = File::open(path).await.map_err(|_| StatusCode::NOT_FOUND)?;
+    
+    // Convertimos el lector asíncrono del archivo en un Stream HTTP
+    let stream = ReaderStream::new(file);
+    let body = Body::from_stream(stream);
+
+    Ok(Response::builder()
+        .header("Content-Type", "audio/mp3")
+        .body(body)
+        .unwrap())
+}
+```
+
+Con esta técnica, la memoria del servidor permanece **plana**, sin importar si el archivo pesa 1MB o 100MB, ya que los trozos se liberan del buffer conforme se envían al cliente.
+
+---
+
+## Paso 5: Uniendo Todo y Añadiendo Limpieza
+
+Para evitar acumular basura en el disco, debemos limpiar los archivos temporales una vez que la respuesta sea entregada:
+
+```rust
+// Dentro de convert_handler...
+run_ffmpeg(&input_path, &output_path).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+let response = stream_file(&output_path).await?;
+
+// Limpieza de archivos temporales
+let _ = tokio::fs::remove_file(input_path).await;
+// Nota: La eliminación del output_path debe coordinarse después de cerrar el stream 
+// o usar soluciones de auto-eliminación como colas de Redis o temporizadores en background.
+
+Ok(response)
+```
+
+---
+
+## Paso 6: ¿Cómo Escalar esto con Colas en Redis?
+
+Para una API de uso intensivo en producción, hacer conversiones síncronas va a saturar tu CPU. La solución limpia que implementé en `chambapro-ffmpeg-api` es usar **Redis** como cola distribuida:
+
+1. El servidor Axum recibe la nota de voz y encola el trabajo en una lista (`LPUSH chambapro:queue`).
+2. Responde de inmediato con un estado `202 Accepted` y un UUID.
+3. Un pool de **Background Workers** independientes consume la cola (`RPOP`), procesa la conversión pesada y descarga la carga del servidor HTTP de cara al usuario.
+4. Una vez lista, el worker envía un **Webhook** al cliente con el enlace de descarga del archivo convertido.
+
+---
+
+## Paso 7: Despliegue en Contenedores
+
+Para ejecutar esto, el contenedor final debe tener instalado `ffmpeg`. Un Dockerfile multi-stage optimizado se vería así:
+
+```dockerfile
+# Stage 1: Compilar la aplicación Rust
+FROM rust:1.75-slim as builder
+WORKDIR /app
+COPY . .
+RUN cargo build --release
+
+# Stage 2: Imagen de ejecución ligera
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ffmpeg ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/ffmpeg-api /usr/local/bin/ffmpeg-api
+
+ENV PORT=80
+CMD ["ffmpeg-api"]
+```
+
+Este enfoque mantiene tu imagen Docker ligera (unos pocos MBs en lugar de gigabytes) y lista para ser desplegada en servicios Cloud como Render, Railway o Easypanel.
+
+---
+
+### Código Completo y Siguientes Pasos
+
+Construir proxies multimedia en Rust es una excelente forma de mantener el control de tus pipelines de datos. Si quieres ver cómo implementé la cola de Redis, la autolimpieza a las 24 horas y un dashboard de métricas en vivo, revisa el código de producción completo en:
+
+👉 **[github.com/rrortega/chambapro-ffmpeg-api](https://github.com/rrortega/chambapro-ffmpeg-api)**
