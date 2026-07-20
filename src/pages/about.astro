@@ -4,30 +4,148 @@ import Layout from '../layouts/BlogPost.astro';
 
 <Layout
 	title="Sobre mí"
-	description="Quién soy, mi trayectoria y por qué este blog."
+	description="Trayectoria, habilidades y filosofía de desarrollo de Rolando Rodríguez Ortega."
 	pubDate={new Date('July 19 2026')}
 >
-	<p>
-		¡Hola! Soy Rolo, Ingeniero de Software enfocado en el desarrollo web moderno, arquitectura de sistemas y optimización. 
-		Me apasiona diseñar soluciones limpias, mantenibles y de alto rendimiento que resuelvan problemas reales de forma elegante.
-	</p>
+	<div class="profile-section">
+		<div class="profile-header">
+			<img src="https://avatars.githubusercontent.com/u/34726482?v=4" alt="Rolando Rodríguez Ortega" class="profile-avatar" />
+			<div class="profile-intro">
+				<p class="profile-tagline">🚀 Full-Stack Software Engineer & Automation Builder</p>
+				<p class="profile-location">📍 Desde México para el mundo</p>
+			</div>
+		</div>
 
-	<h2>¿Por qué este espacio?</h2>
-	<p>
-		Creo firmemente que la mejor manera de consolidar lo que uno aprende es compartiéndolo. Este blog nace con la intención 
-		de documentar mis desafíos técnicos cotidianos, tutoriales prácticos y opiniones sobre la evolución del ecosistema de desarrollo de software.
-	</p>
+		<div class="profile-body">
+			<p>
+				¡Hola! Soy <strong>Rolando Rodríguez Ortega</strong>. Me apasiona transformar ideas complejas en soluciones tecnológicas 
+				eficientes, robustas y escalables. Actualmente me desempeño como Ingeniero de Software en <strong>CHAMBAPRO SAPI de CV</strong>, 
+				donde construyo y optimizo plataformas que impactan positivamente el flujo de trabajo diario de miles de usuarios.
+			</p>
 
-	<h2>Mi enfoque</h2>
-	<p>
-		Valoro la simplicidad sobre la complejidad innecesaria. Prefiero entender a fondo los fundamentos antes de saltar a usar
-		cualquier framework de moda. Mi caja de herramientas actual incluye JavaScript/TypeScript, arquitecturas cloud, bases de datos 
-		relacionales y no relacionales, y herramientas de testing avanzadas.
-	</p>
+			<h2>Lo que hago</h2>
+			<p>
+				Mi enfoque principal está en el desarrollo full-stack y la automatización de procesos. Disfruto diseñar arquitecturas limpias, 
+				integrar APIs de terceros y optimizar el rendimiento de aplicaciones para garantizar una experiencia de usuario sobresaliente.
+			</p>
 
-	<h2>Contacto</h2>
-	<p>
-		Si querés charlar sobre algún proyecto, tenés dudas sobre algún artículo o simplemente querés saludar, me podés encontrar 
-		en <a href="https://github.com/rrortega" target="_blank" rel="noopener noreferrer">GitHub</a>.
-	</p>
+			<div class="tech-box">
+				<h3>Caja de herramientas</h3>
+				<div class="tech-grid">
+					<div class="tech-category">
+						<strong>Frontend:</strong> Astro, TypeScript, JavaScript (ES6+), CSS moderno.
+					</div>
+					<div class="tech-category">
+						<strong>Backend:</strong> Node.js, PHP.
+					</div>
+					<div class="tech-category">
+						<strong>Automatización & DevOps:</strong> n8n, GitHub Actions, Render.com.
+					</div>
+				</div>
+			</div>
+
+			<h2>Filosofía de desarrollo</h2>
+			<blockquote>
+				"La simplicidad es la máxima sofisticación. Un buen código no es el que más librerías usa, sino el que resuelve el problema de la manera más clara y fácil de mantener."
+			</blockquote>
+			<p>
+				Apuesto siempre por entender los fundamentos del software antes de sobrecargar un proyecto. Me enfoco en escribir código 
+				mantenible, bien documentado y respaldado por flujos de integración continua sólidos que agilicen las entregas de forma segura.
+			</p>
+
+			<h2>Hablemos</h2>
+			<p>
+				Si querés colaborar en algún proyecto, charlar sobre automatizaciones con n8n, o simplemente compartir ideas sobre desarrollo web, 
+				podés encontrarme en mis canales oficiales:
+			</p>
+			<ul class="contact-list">
+				<li>🖥️ GitHub: <a href="https://github.com/rrortega" target="_blank" rel="noopener noreferrer">github.com/rrortega</a></li>
+				<li>💼 LinkedIn: <a href="https://www.linkedin.com/in/rrortega/" target="_blank" rel="noopener noreferrer">linkedin.com/in/rrortega</a></li>
+				<li>🌐 Web: <a href="https://rrortega.com" target="_blank" rel="noopener noreferrer">rrortega.com</a></li>
+			</ul>
+		</div>
+	</div>
 </Layout>
+
+<style>
+	.profile-section {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+	}
+	.profile-header {
+		display: flex;
+		align-items: center;
+		gap: 2rem;
+		padding: 1.5rem;
+		background-color: var(--accent-subtle);
+		border: 1px dashed var(--accent);
+		border-radius: 8px;
+	}
+	.profile-avatar {
+		width: 120px;
+		height: 120px;
+		border-radius: 50%;
+		border: 2px solid var(--accent);
+		flex-shrink: 0;
+	}
+	.profile-intro {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.profile-tagline {
+		font-family: var(--font-mono);
+		font-size: 1.05rem;
+		font-weight: 600;
+		color: var(--text);
+		margin: 0;
+	}
+	.profile-location {
+		font-size: 0.9rem;
+		color: var(--text-muted);
+		margin: 0;
+	}
+	.tech-box {
+		margin: 2rem 0;
+		padding: 1.5rem;
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		background-color: var(--code-bg);
+	}
+	.tech-box h3 {
+		margin-top: 0;
+		font-family: var(--font-mono);
+		font-size: 1.1rem;
+		color: var(--accent);
+	}
+	.tech-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		font-size: 0.95rem;
+	}
+	.contact-list {
+		list-style: none;
+		padding: 0;
+		margin: 1.5rem 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.contact-list li {
+		font-family: var(--font-mono);
+		font-size: 0.95rem;
+	}
+	@media (max-width: 600px) {
+		.profile-header {
+			flex-direction: column;
+			text-align: center;
+			gap: 1rem;
+		}
+		.profile-avatar {
+			width: 100px;
+			height: 100px;
+		}
+	}
+</style>
