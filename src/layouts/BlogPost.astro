@@ -5,6 +5,8 @@ import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
 
+import { Image } from 'astro:assets';
+
 type Props = CollectionEntry<'blog'>['data'];
 
 const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
@@ -21,7 +23,7 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 			<article class="post-article">
 				{heroImage && (
 					<div class="hero-container">
-						<img src={heroImage} alt="" class="hero-img" />
+						<Image src={heroImage} alt="" class="hero-img" />
 					</div>
 				)}
 				
@@ -77,6 +79,7 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 		height: auto;
 		display: block;
 		border-radius: 6px;
+		cursor: zoom-in;
 	}
 	.prose {
 		max-width: 680px;
@@ -233,7 +236,7 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 
 <script>
 	document.addEventListener('astro:page-load', () => {
-		const images = document.querySelectorAll('.content-body img');
+		const images = document.querySelectorAll('.content-body img, .hero-img');
 		const modal = document.getElementById('lightbox-modal');
 		const modalImg = document.getElementById('lightbox-img') as HTMLImageElement | null;
 		const captionText = document.getElementById('lightbox-caption');

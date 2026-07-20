@@ -2,7 +2,7 @@
 title: 'Convertir audio con Rust y FFmpeg en milisegundos'
 description: 'Crea una API ultra rápida en Rust con FFmpeg para optimizar transcripciones de OpenAI Whisper en integraciones de mensajería.'
 pubDate: 'Jul 19 2026'
-heroImage: 'https://opengraph.githubassets.com/8ec9919eeb7baeab4090eaed242cd15033af0fb105f48a60e996f75f63930a63/rrortega/chambapro-ffmpeg-api'
+heroImage: '../../assets/github-cover-ffmpeg-api.jpg'
 ---
 
 Integras notas de voz de WhatsApp en tu agente de AI, pero la API de Whisper tarda una eternidad o falla constantemente. Ya sea que uses agregadores como ManyChat, yCloud, Kaypso, o la API oficial de Meta para WhatsApp Business, los audios llegan en formato `.oga` u `.ogg`, los cuales ralentizan el Speech-to-Text. Whisper procesa la información muchísimo más rápido si le entregas un archivo `.mp3` limpio y optimizado a 128kbps.
