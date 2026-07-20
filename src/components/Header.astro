@@ -27,28 +27,30 @@ import HeaderLink from './HeaderLink.astro';
 </header>
 
 <script>
-	const themeToggle = document.getElementById('theme-toggle');
-	const textDec = document.getElementById('text-dec');
-	const textInc = document.getElementById('text-inc');
+	document.addEventListener('astro:page-load', () => {
+		const themeToggle = document.getElementById('theme-toggle');
+		const textDec = document.getElementById('text-dec');
+		const textInc = document.getElementById('text-inc');
 
-	themeToggle?.addEventListener('click', () => {
-		const currentTheme = document.documentElement.getAttribute('data-theme') || 
-			(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-		const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-		document.documentElement.setAttribute('data-theme', newTheme);
-		localStorage.setItem('theme', newTheme);
+		themeToggle?.addEventListener('click', () => {
+			const currentTheme = document.documentElement.getAttribute('data-theme') || 
+				(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+			const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+			document.documentElement.setAttribute('data-theme', newTheme);
+			localStorage.setItem('theme', newTheme);
+		});
+
+		const changeScale = (delta: number) => {
+			const currentScale = parseFloat(document.documentElement.style.getPropertyValue('--text-scale') || '1');
+			const newScale = Math.min(Math.max(currentScale + delta, 0.8), 1.4);
+			const fixedScale = newScale.toFixed(1);
+			document.documentElement.style.setProperty('--text-scale', fixedScale);
+			localStorage.setItem('text-scale', fixedScale);
+		};
+
+		textDec?.addEventListener('click', () => changeScale(-0.1));
+		textInc?.addEventListener('click', () => changeScale(0.1));
 	});
-
-	const changeScale = (delta: number) => {
-		const currentScale = parseFloat(document.documentElement.style.getPropertyValue('--text-scale') || '1');
-		const newScale = Math.min(Math.max(currentScale + delta, 0.8), 1.4);
-		const fixedScale = newScale.toFixed(1);
-		document.documentElement.style.setProperty('--text-scale', fixedScale);
-		localStorage.setItem('text-scale', fixedScale);
-	};
-
-	textDec?.addEventListener('click', () => changeScale(-0.1));
-	textInc?.addEventListener('click', () => changeScale(0.1));
 </script>
 
 <style>

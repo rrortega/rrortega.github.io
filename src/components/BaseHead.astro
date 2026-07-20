@@ -5,6 +5,8 @@ import FallbackImage from '../assets/blog-placeholder-1.jpg';
 import { SITE_TITLE } from '../consts';
 import { Font } from 'astro:assets';
 
+import { ClientRouter } from 'astro:transitions';
+
 interface Props {
 	title: string;
 	description: string;
@@ -15,6 +17,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
 const { title, description, image = FallbackImage } = Astro.props;
 ---
+
+<ClientRouter />
 
 <!-- Global Metadata -->
 <meta charset="utf-8" />

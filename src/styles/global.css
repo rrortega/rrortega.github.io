@@ -76,7 +76,7 @@ body {
 	background-image: radial-gradient(var(--bg-dot) 1px, transparent 1px);
 	background-size: 24px 24px;
 	color: var(--text);
-	font-size: calc(18px * var(--text-scale));
+	font-size: calc(20px * var(--text-scale));
 	line-height: 1.6;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
